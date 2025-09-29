@@ -1,0 +1,9 @@
+- name: Create Domain
+  microsoft.ad.domain:
+    reboot: true
+    domain_mode: WinThreshold
+    forest_mode: WinThreshold
+    install_dns: true
+    create_dns_delegation: false
+    dns_domain_name: "{{ domain_controller_dns_domain_name }}"
+    safe_mode_password: "{{ ansible_password }}"

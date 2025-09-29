@@ -1,0 +1,19 @@
+collections:
+  # see https://galaxy.ansible.com/ui/repo/published/cloud/terraform
+  - name: cloud.terraform
+    version: 4.0.0
+  # see https://galaxy.ansible.com/ui/repo/published/ansible/windows
+  - name: ansible.windows
+    version: 3.2.0
+  # see https://galaxy.ansible.com/ui/repo/published/chocolatey/chocolatey
+  - name: chocolatey.chocolatey
+    version: 1.5.3
+  # see https://galaxy.ansible.com/ui/repo/published/community/general
+  - name: community.general
+    version: 11.3.0
+  # see https://galaxy.ansible.com/ui/repo/published/community/windows
+  - name: community.windows
+    version: 3.0.1
+  # see https://galaxy.ansible.com/ui/repo/published/microsoft/ad
+  - name: microsoft.ad
+    version: 1.9.2

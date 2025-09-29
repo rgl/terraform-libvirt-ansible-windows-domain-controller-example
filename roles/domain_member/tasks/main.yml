@@ -1,0 +1,50 @@
+- name: Sysprep
+  block:
+    - name: Copy provision-sysprep-oobe.ps1
+      ansible.windows.win_copy:
+        src: provision-sysprep-oobe.ps1
+        dest: C:\Windows\System32\Sysprep\provision-sysprep-oobe.ps1
+    - name: Sysprep
+      ansible.windows.win_powershell:
+        script: "{{ lookup('file', 'provision-sysprep.ps1') }}"
+        sensitive_parameters:
+          - name: autoLogonCredential
+            username: "{{ ansible_user }}"
+            password: "{{ ansible_password }}"
+      register: domain_member_sysprep
+    # NB we have to use ssh because winrm/psrp cannot be used after a sysprep
+    #    until the machine is rebooted. otherwise, it fails with:
+    #     [ERROR]: Task failed: Action failed: Server did not response with a CredSSP token after step Credential exchange - actual ''
+    - name: Reboot
+      when: domain_member_sysprep.changed
+      vars:
+        ansible_connection: ssh
+        ansible_shell_type: cmd
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa
+        ansible_ssh_common_args: -o StrictHostKeyChecking=no
+      block:
+        - name: Reset Ansible Connection
+          ansible.builtin.meta: reset_connection
+        - name: Reboot
+          ansible.windows.win_reboot: {}
+        - name: Wait for Sysprep OOBE
+          ansible.windows.win_powershell:
+            script: "{{ lookup('file', 'provision-sysprep-wait.ps1') }}"
+    - name: Reset Ansible Connection
+      when: domain_member_sysprep.changed
+      ansible.builtin.meta: reset_connection
+
+- name: Use the Domain Controller DNS server
+  ansible.windows.win_dns_client:
+    adapter_names: "*"
+    ipv4_addresses:
+      - "{{ domain_member_domain_controller_ip_address }}"
+
+- name: Add to Domain
+  microsoft.ad.membership:
+    state: domain
+    reboot: true
+    hostname: "{{ inventory_hostname_short }}"
+    dns_domain_name: "{{ domain_member_dns_domain_name }}"
+    domain_admin_user: "{{ ansible_user }}@{{ domain_member_dns_domain_name }}"
+    domain_admin_password: "{{ ansible_password }}"

@@ -1,0 +1,8 @@
+tmp/
+.ansible/
+.ansible-venv/
+.terraform/
+terraform.tfstate*
+tfplan
+*.log
+*-ssh-known-hosts.txt

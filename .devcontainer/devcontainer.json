@@ -1,0 +1,29 @@
+{
+  "name": "Ansible",
+  "dockerFile": "../Dockerfile",
+  "context": "..",
+  "runArgs": [
+    "--group-add=120", // 120 is the id of the libvirt group.
+    "-v=${localEnv:HOME}/.ssh/id_rsa:/home/vscode/.ssh/id_rsa:ro",
+    "-v=${localEnv:HOME}/.ssh/id_rsa.pub:/home/vscode/.ssh/id_rsa.pub:ro",
+    "-v=/var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock"
+  ],
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "features": {
+    "ghcr.io/devcontainers/features/powershell": {
+      "version": "7.4.12"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-python.black-formatter",
+        "ms-python.python",
+        "redhat.ansible",
+        "samuelcolvin.jinjahtml",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  }
+}

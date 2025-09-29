@@ -1,0 +1,16 @@
+- name: Domain Controller
+  hosts: dcs
+  gather_facts: true
+  vars:
+    domain_controller_dns_domain_name: "{{ windows_dns_domain_name }}"
+  roles:
+    - domain_controller
+
+- name: Domain Member
+  hosts: dms
+  gather_facts: true
+  vars:
+    domain_member_domain_controller_ip_address: "{{ windows_domain_controller_ip_address }}"
+    domain_member_dns_domain_name: "{{ windows_dns_domain_name }}"
+  roles:
+    - domain_member

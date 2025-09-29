@@ -1,0 +1,8 @@
+{
+    "cSpell.words": [
+        "cloudinit",
+        "distro",
+        "paramiko"
+    ],
+    "ansible.python.interpreterPath": "/opt/venv/bin/python3"
+}
