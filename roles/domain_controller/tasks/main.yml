@@ -7,3 +7,22 @@
     create_dns_delegation: false
     dns_domain_name: "{{ domain_controller_dns_domain_name }}"
     safe_mode_password: "{{ ansible_password }}"
+
+- name: Create the alice domain user
+  microsoft.ad.user:
+    identity: alice
+    password: "{{ ansible_password }}"
+    update_password: on_create
+    groups:
+      set:
+        - Domain Admins
+        - Domain Users
+
+- name: Create the bob domain user
+  microsoft.ad.user:
+    identity: bob
+    password: "{{ ansible_password }}"
+    update_password: on_create
+    groups:
+      set:
+        - Domain Users

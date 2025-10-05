@@ -57,7 +57,7 @@ for n in dc dm; do
 done
 ```
 
-Using your ssh client, open a shell inside the VM and execute some commands:
+Using your ssh client, open a shell inside the `dc` VM and execute some commands:
 
 ```bash
 ssh \
@@ -91,14 +91,51 @@ time ansible-playbook playbook.yml #-vvv
 time ansible-playbook playbook.yml --limit dms #-vvv
 ```
 
-Using your ssh client, open a shell inside the VM and execute some commands:
+Using your ssh client, open a shell inside the `dc` VM as the `vagrant` local user (since we are logging into the domain controller, this is also a domain user), and execute some commands:
+
+```bash
+ssh \
+  -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
+  "vagrant@$(terraform output --raw dc_ip_address)"
+echo %computername%
+echo %user%
+echo %username%
+echo %userdomain%
+echo %userprofile%
+whoami /all
+klist
+exit
+```
+
+Using your ssh client, open a shell inside the `dm` VM as the `vagrant` local user, and execute some commands:
 
 ```bash
 ssh \
   -o UserKnownHostsFile=dm-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dm_ip_address)"
+echo %computername%
+echo %user%
+echo %username%
+echo %userdomain%
+echo %userprofile%
 whoami /all
-ver
+exit
+```
+
+Using your ssh client, open a shell inside the `dm` VM as the `alice` domain user, and execute some commands:
+
+```bash
+SSHPASS=HeyH0Password sshpass -e \
+  ssh \
+  -o UserKnownHostsFile=dm-ssh-known-hosts.txt \
+  "example\\alice@$(terraform output --raw dm_ip_address)"
+echo %computername%
+echo %user%
+echo %username%
+echo %userdomain%
+echo %userprofile%
+whoami /all
+klist
 exit
 ```
 
