@@ -42,17 +42,19 @@ virsh qemu-agent-command terraform-domain-controller-example-dc '{"execute":"gue
 ./qemu-agent-guest-exec terraform-domain-controller-example-dc winrm get winrm/config
 ```
 
-Get the guest ssh host public keys, convert them to the knowns hosts format,
+Get the guests ssh host public keys, convert them to the knowns hosts format,
 and show their fingerprints:
 
 ```bash
-./qemu-agent-guest-exec-get-sshd-public-keys.sh \
-  terraform-domain-controller-example-dc \
-  | tail -1 \
-  | jq -r .sshd_public_keys \
-  | sed "s/^/$(terraform output --raw dm_ip_address) /" \
-  > dc-ssh-known-hosts.txt
-ssh-keygen -l -f dc-ssh-known-hosts.txt
+for n in dc dm; do
+  ./qemu-agent-guest-exec-get-sshd-public-keys.sh \
+    "terraform-domain-controller-example-$n" \
+    | tail -1 \
+    | jq -r .sshd_public_keys \
+    | sed "s/^/$(terraform output --raw "${n}_ip_address") /" \
+    > "$n-ssh-known-hosts.txt"
+  ssh-keygen -l -f "$n-ssh-known-hosts.txt"
+done
 ```
 
 Using your ssh client, open a shell inside the VM and execute some commands:
@@ -60,7 +62,7 @@ Using your ssh client, open a shell inside the VM and execute some commands:
 ```bash
 ssh \
   -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
-  "vagrant@$(terraform output --raw dm_ip_address)"
+  "vagrant@$(terraform output --raw dc_ip_address)"
 echo %computername%
 whoami /all
 exit
@@ -93,7 +95,7 @@ Using your ssh client, open a shell inside the VM and execute some commands:
 
 ```bash
 ssh \
-  -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
+  -o UserKnownHostsFile=dm-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dm_ip_address)"
 whoami /all
 ver
