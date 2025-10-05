@@ -1,3 +1,4 @@
+# TODO simplify this when https://github.com/ansible-collections/ansible.windows/issues/831 is addressed.
 - name: Sysprep
   block:
     - name: Copy provision-sysprep-oobe.ps1
