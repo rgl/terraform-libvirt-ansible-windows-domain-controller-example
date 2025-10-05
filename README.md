@@ -63,6 +63,8 @@ Using your ssh client, open a shell inside the `dc` VM and execute some commands
 ssh \
   -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dc_ip_address)"
+```
+```bat
 echo %computername%
 whoami /all
 exit
@@ -97,6 +99,8 @@ Using your ssh client, open a shell inside the `dc` VM as the `vagrant` local us
 ssh \
   -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dc_ip_address)"
+```
+```bat
 echo %computername%
 echo %user%
 echo %username%
@@ -113,6 +117,8 @@ Using your ssh client, open a shell inside the `dm` VM as the `vagrant` local us
 ssh \
   -o UserKnownHostsFile=dm-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dm_ip_address)"
+```
+```bat
 echo %computername%
 echo %user%
 echo %username%
@@ -129,12 +135,36 @@ SSHPASS=HeyH0Password sshpass -e \
   ssh \
   -o UserKnownHostsFile=dm-ssh-known-hosts.txt \
   "example\\alice@$(terraform output --raw dm_ip_address)"
+```
+```bat
 echo %computername%
 echo %user%
 echo %username%
 echo %userdomain%
 echo %userprofile%
 whoami /all
+klist
+:: use the share as the current user.
+echo %time% %user% >\\DC\Share\test.txt
+type \\DC\Share\test.txt
+klist
+:: use the share as the other user.
+:: NB alice can write to the share.
+:: NB bob can only read from the share.
+if "%username%"=="alice" (set otherusername=bob) else (set otherusername=alice)
+set otheruser=%userdomain%\%otherusername%
+net use x: \\DC\Share /user:%otheruser% HeyH0Password
+if "%otherusername%"=="bob" (echo NB writes are expected to fail)
+echo %time% %otheruser% >\\DC\Share\test.txt
+type \\DC\Share\test.txt
+net use x: /user:%otheruser% /delete
+klist
+:: login as the current user, then, try to write gain.
+:: NB a re-login is required to flush the previous smb session/credential.
+net use x: \\DC\Share /user:%user%
+echo %time% %user% >\\DC\Share\test.txt
+type \\DC\Share\test.txt
+net use x: /user:%user% /delete
 klist
 exit
 ```

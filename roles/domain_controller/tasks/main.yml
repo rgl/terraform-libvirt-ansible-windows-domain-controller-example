@@ -26,3 +26,41 @@
     groups:
       set:
         - Domain Users
+
+- name: Create share
+  vars:
+    share_name: Share
+    share_path: C:\Share
+  block:
+    - name: Create share directory
+      ansible.windows.win_file:
+        path: "{{ share_path }}"
+        state: directory
+
+    - name: Remove inheritance
+      ansible.windows.win_acl_inheritance:
+        path: "{{ share_path }}"
+        state: absent
+
+    - name: Grant Full Control to Administrators
+      ansible.windows.win_acl:
+        path: "{{ share_path }}"
+        type: allow
+        user: Administrators
+        rights: FullControl
+        inherit: ContainerInherit,ObjectInherit
+
+    - name: Grant Read to Authenticated Users
+      ansible.windows.win_acl:
+        path: "{{ share_path }}"
+        type: allow
+        user: Authenticated Users
+        rights: Read
+        inherit: ContainerInherit,ObjectInherit
+
+    - name: Create share
+      ansible.windows.win_share:
+        name: "{{ share_name }}"
+        path: "{{ share_path }}"
+        full: Administrators
+        read: Authenticated Users
