@@ -26,20 +26,20 @@ terraform plan -out=tfplan
 time terraform apply tfplan
 ```
 
-**NB** if you have errors alike `Could not open '/var/lib/libvirt/images/terraform-domain-controller-example_dm_root.img': Permission denied'` you need to reconfigure libvirt by setting `security_driver = "none"` in `/etc/libvirt/qemu.conf` and restart libvirt with `sudo systemctl restart libvirtd`.
+**NB** if you have errors alike `Could not open '/var/lib/libvirt/images/terraform-libvirt-ansible-windows-domain-controller-example_dm_root.img': Permission denied'` you need to reconfigure libvirt by setting `security_driver = "none"` in `/etc/libvirt/qemu.conf` and restart libvirt with `sudo systemctl restart libvirtd`.
 
 Show information about the libvirt/qemu guest:
 
 ```bash
-virsh dumpxml terraform-domain-controller-example-dc
-virsh qemu-agent-command terraform-domain-controller-example-dc '{"execute":"guest-info"}' --pretty
-virsh qemu-agent-command terraform-domain-controller-example-dc '{"execute":"guest-network-get-interfaces"}' --pretty
+virsh dumpxml terraform-libvirt-ansible-windows-domain-controller-example-dc
+virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc '{"execute":"guest-info"}' --pretty
+virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc '{"execute":"guest-network-get-interfaces"}' --pretty
 # NB the first command after a (re)boot will take some minutes until
 #    qemu-agent and winrm are available. the commands that follow it
 #    should execute quickly.
 # NB these command are executed as the local system user.
-./qemu-agent-guest-exec terraform-domain-controller-example-dc winrm enumerate winrm/config/listener
-./qemu-agent-guest-exec terraform-domain-controller-example-dc winrm get winrm/config
+./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc winrm enumerate winrm/config/listener
+./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc winrm get winrm/config
 ```
 
 Get the guests ssh host public keys, convert them to the knowns hosts format,
@@ -48,7 +48,7 @@ and show their fingerprints:
 ```bash
 for n in dc dm; do
   ./qemu-agent-guest-exec-get-sshd-public-keys.sh \
-    "terraform-domain-controller-example-$n" \
+    "terraform-libvirt-ansible-windows-domain-controller-example-$n" \
     | tail -1 \
     | jq -r .sshd_public_keys \
     | sed "s/^/$(terraform output --raw "${n}_ip_address") /" \

@@ -35,7 +35,11 @@ provider "libvirt" {
 
 variable "prefix" {
   type    = string
-  default = "terraform-domain-controller-example"
+  default = "terraform-libvirt-ansible-windows-domain-controller-example"
+}
+
+variable "workspace_path" {
+  type = string
 }
 
 variable "winrm_username" {

@@ -51,9 +51,10 @@ resource "libvirt_volume" "dm_root" {
 
 # see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/domain.html.markdown
 resource "libvirt_domain" "dm" {
-  name     = "${var.prefix}-dm"
-  machine  = "q35"
-  firmware = "/usr/share/OVMF/OVMF_CODE.fd"
+  name        = "${var.prefix}-dm"
+  description = "see ${var.workspace_path}"
+  machine     = "q35"
+  firmware    = "/usr/share/OVMF/OVMF_CODE.fd"
   cpu {
     mode = "host-passthrough"
   }
