@@ -3,7 +3,7 @@ resource "ansible_group" "all" {
   children = [ansible_group.dcs.name, ansible_group.dms.name]
   variables = {
     # connection configuration.
-    # see https://docs.ansible.com/ansible-core/2.19/collections/ansible/builtin/psrp_connection.html
+    # see https://docs.ansible.com/ansible-core/2.20/collections/ansible/builtin/psrp_connection.html
     ansible_user                    = var.winrm_username
     ansible_password                = var.winrm_password
     ansible_connection              = "psrp"
