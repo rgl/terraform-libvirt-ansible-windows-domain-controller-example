@@ -54,7 +54,7 @@ resource "libvirt_domain" "dc" {
   name        = "${var.prefix}-dc"
   description = "see ${var.workspace_path}"
   machine     = "q35"
-  firmware    = "/usr/share/OVMF/OVMF_CODE.fd"
+  firmware    = "/usr/share/OVMF/OVMF_CODE_4M.fd"
   cpu {
     mode = "host-passthrough"
   }
