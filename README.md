@@ -31,22 +31,22 @@ time terraform apply tfplan
 Show information about the libvirt/qemu guest:
 
 ```bash
-virsh dumpxml terraform-libvirt-ansible-windows-domain-controller-example-dc
-virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc '{"execute":"guest-info"}' --pretty
-virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc '{"execute":"guest-network-get-interfaces"}' --pretty
+virsh dumpxml terraform-libvirt-ansible-windows-domain-controller-example-dc1
+virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc1 '{"execute":"guest-info"}' --pretty
+virsh qemu-agent-command terraform-libvirt-ansible-windows-domain-controller-example-dc1 '{"execute":"guest-network-get-interfaces"}' --pretty
 # NB the first command after a (re)boot will take some minutes until
 #    qemu-agent and winrm are available. the commands that follow it
 #    should execute quickly.
 # NB these command are executed as the local system user.
-./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc winrm enumerate winrm/config/listener
-./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc winrm get winrm/config
+./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc1 winrm enumerate winrm/config/listener
+./qemu-agent-guest-exec terraform-libvirt-ansible-windows-domain-controller-example-dc1 winrm get winrm/config
 ```
 
 Get the guests ssh host public keys, convert them to the knowns hosts format,
 and show their fingerprints:
 
 ```bash
-for n in dc dm; do
+for n in dc1 dc2 dm; do
   ./qemu-agent-guest-exec-get-sshd-public-keys.sh \
     "terraform-libvirt-ansible-windows-domain-controller-example-$n" \
     | tail -1 \
@@ -57,12 +57,12 @@ for n in dc dm; do
 done
 ```
 
-Using your ssh client, open a shell inside the `dc` VM and execute some commands:
+Using your ssh client, open a shell inside the `dc1` VM and execute some commands:
 
 ```bash
 ssh \
-  -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
-  "vagrant@$(terraform output --raw dc_ip_address)"
+  -o UserKnownHostsFile=dc1-ssh-known-hosts.txt \
+  "vagrant@$(terraform output --raw dc1_ip_address)"
 ```
 ```bat
 echo %computername%
@@ -93,12 +93,12 @@ time ansible-playbook playbook.yml #-vvv
 time ansible-playbook playbook.yml --limit dms #-vvv
 ```
 
-Using your ssh client, open a shell inside the `dc` VM as the `vagrant` local user (since we are logging into the domain controller, this is also a domain user), and execute some commands:
+Using your ssh client, open a shell inside the `dc1` VM as the `vagrant` local user (since we are logging into the domain controller, this is also a domain user), and execute some commands:
 
 ```bash
 ssh \
   -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
-  "vagrant@$(terraform output --raw dc_ip_address)"
+  "vagrant@$(terraform output --raw dc1_ip_address)"
 ```
 ```bat
 echo %computername%
@@ -106,8 +106,13 @@ echo %user%
 echo %username%
 echo %userdomain%
 echo %userprofile%
+echo %logonserver%
 whoami /all
 klist
+dcdiag
+repadmin /replsummary
+repadmin /showrepl
+repadmin /queue
 exit
 ```
 
@@ -124,6 +129,7 @@ echo %user%
 echo %username%
 echo %userdomain%
 echo %userprofile%
+echo %logonserver%
 whoami /all
 exit
 ```
@@ -142,6 +148,7 @@ echo %user%
 echo %username%
 echo %userdomain%
 echo %userprofile%
+echo %logonserver%
 whoami /all
 klist
 :: use the share as the current user.

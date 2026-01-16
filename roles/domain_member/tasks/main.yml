@@ -39,7 +39,8 @@
   ansible.windows.win_dns_client:
     adapter_names: "*"
     ipv4_addresses:
-      - "{{ domain_member_domain_controller_ip_address }}"
+      - "{{ domain_member_domain_controller1_ip_address }}"
+      - "{{ domain_member_domain_controller2_ip_address }}"
 
 - name: Add to Domain
   microsoft.ad.membership:

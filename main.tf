@@ -63,8 +63,12 @@ variable "base_volume_name" {
   default = "windows-2022-uefi-amd64_vagrant_box_image_0.0.0_box_0.img"
 }
 
-output "dc_ip_address" {
-  value = local.dc_ip_address
+output "dc1_ip_address" {
+  value = local.dcs[0].ip_address
+}
+
+output "dc2_ip_address" {
+  value = local.dcs[1].ip_address
 }
 
 output "dm_ip_address" {
@@ -73,8 +77,15 @@ output "dm_ip_address" {
 
 locals {
   example_ip_cidr = "10.17.3.0/24"
-  dc_ip_address   = "10.17.3.2"
-  dm_ip_address   = "10.17.3.10"
+  dcs = [
+    {
+      ip_address = "10.17.3.2"
+    },
+    {
+      ip_address = "10.17.3.3"
+    },
+  ]
+  dm_ip_address = "10.17.3.10"
 }
 
 # see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/network.markdown

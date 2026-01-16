@@ -1,3 +1,4 @@
 domain_member_dns_domain_name: example.test
 
-domain_member_domain_controller_ip_address: 10.17.3.2
+domain_member_domain_controller1_ip_address: '10.17.3.2'
+domain_member_domain_controller2_ip_address: '10.17.3.3'

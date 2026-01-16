@@ -12,8 +12,9 @@ resource "ansible_group" "all" {
     ansible_psrp_auth               = "credssp"
 
     # common variables.
-    windows_dns_domain_name              = "example.test"
-    windows_domain_controller_ip_address = local.dc_ip_address
+    windows_dns_domain_name               = "example.test"
+    windows_domain_controller1_ip_address = local.dcs[0].ip_address
+    windows_domain_controller2_ip_address = local.dcs[1].ip_address
   }
 }
 
@@ -30,10 +31,11 @@ resource "ansible_group" "dms" {
 }
 
 resource "ansible_host" "dc" {
-  name   = "dc"
+  count  = length(local.dcs)
+  name   = "dc${count.index + 1}"
   groups = [ansible_group.dcs.name]
   variables = {
-    ansible_host = length(libvirt_domain.dc.network_interface[0].addresses) > 0 ? libvirt_domain.dc.network_interface[0].addresses[0] : ""
+    ansible_host = local.dcs[count.index].ip_address
   }
 }
 

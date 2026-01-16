@@ -1,16 +1,29 @@
-- name: Domain Controller
-  hosts: dcs
+- name: Primary Domain Controller
+  hosts: dc1
   gather_facts: true
   vars:
     domain_controller_dns_domain_name: "{{ windows_dns_domain_name }}"
   roles:
     - domain_controller
 
+- name: Secondary Domain Controller
+  hosts: dc2
+  gather_facts: true
+  vars:
+    domain_member_domain_controller1_ip_address: "{{ windows_domain_controller1_ip_address }}"
+    domain_member_domain_controller2_ip_address: "{{ windows_domain_controller2_ip_address }}"
+    domain_member_dns_domain_name: "{{ windows_dns_domain_name }}"
+    domain_controller_dns_domain_name: "{{ windows_dns_domain_name }}"
+  roles:
+    - domain_member
+    - domain_controller
+
 - name: Domain Member
   hosts: dms
   gather_facts: true
   vars:
-    domain_member_domain_controller_ip_address: "{{ windows_domain_controller_ip_address }}"
+    domain_member_domain_controller1_ip_address: "{{ windows_domain_controller1_ip_address }}"
+    domain_member_domain_controller2_ip_address: "{{ windows_domain_controller2_ip_address }}"
     domain_member_dns_domain_name: "{{ windows_dns_domain_name }}"
   roles:
     - domain_member

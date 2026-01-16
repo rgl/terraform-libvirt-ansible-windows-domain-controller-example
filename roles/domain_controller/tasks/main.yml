@@ -1,4 +1,5 @@
 - name: Create Domain
+  when: inventory_hostname_short == "dc1"
   microsoft.ad.domain:
     reboot: true
     domain_mode: WinThreshold
@@ -8,24 +9,47 @@
     dns_domain_name: "{{ domain_controller_dns_domain_name }}"
     safe_mode_password: "{{ ansible_password }}"
 
-- name: Create the alice domain user
-  microsoft.ad.user:
-    identity: alice
-    password: "{{ ansible_password }}"
-    update_password: on_create
-    groups:
-      set:
-        - Domain Admins
-        - Domain Users
+- name: Promote to Domain Controller
+  when: inventory_hostname_short != "dc1"
+  microsoft.ad.domain_controller:
+    reboot: true
+    install_dns: true
+    dns_domain_name: "{{ domain_controller_dns_domain_name }}"
+    safe_mode_password: "{{ ansible_password }}"
+    domain_admin_user: "{{ ansible_user }}@{{ domain_member_dns_domain_name }}"
+    domain_admin_password: "{{ ansible_password }}"
+    state: domain_controller
 
-- name: Create the bob domain user
-  microsoft.ad.user:
-    identity: bob
-    password: "{{ ansible_password }}"
-    update_password: on_create
-    groups:
-      set:
-        - Domain Users
+- name: Create Domain Users
+  when: inventory_hostname_short == "dc1"
+  block:
+    - name: Set the current ansible user domain groups
+      microsoft.ad.user:
+        identity: "{{ ansible_user }}"
+        groups:
+          set:
+            - Enterprise Admins
+            - Domain Admins
+            - Domain Users
+
+    - name: Create the alice domain user
+      microsoft.ad.user:
+        identity: alice
+        password: "{{ ansible_password }}"
+        update_password: on_create
+        groups:
+          set:
+            - Domain Admins
+            - Domain Users
+
+    - name: Create the bob domain user
+      microsoft.ad.user:
+        identity: bob
+        password: "{{ ansible_password }}"
+        update_password: on_create
+        groups:
+          set:
+            - Domain Users
 
 - name: Create share
   vars:
