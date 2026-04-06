@@ -97,7 +97,7 @@ Using your ssh client, open a shell inside the `dc1` VM as the `vagrant` local u
 
 ```bash
 ssh \
-  -o UserKnownHostsFile=dc-ssh-known-hosts.txt \
+  -o UserKnownHostsFile=dc1-ssh-known-hosts.txt \
   "vagrant@$(terraform output --raw dc1_ip_address)"
 ```
 ```bat
