@@ -58,9 +58,15 @@ variable "winrm_password" {
 }
 
 # NB this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
-variable "base_volume_name" {
+variable "dc_base_volume_name" {
   type    = string
   default = "windows-2022-uefi-amd64_vagrant_box_image_0.0.0_box_0.img"
+}
+
+# NB this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
+variable "dm_base_volume_name" {
+  type    = string
+  default = "windows-11-24h2-uefi-amd64_vagrant_box_image_0.0.0_box_0.img"
 }
 
 output "dc1_ip_address" {

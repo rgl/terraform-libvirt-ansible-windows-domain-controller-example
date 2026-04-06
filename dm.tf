@@ -45,7 +45,7 @@ resource "libvirt_cloudinit_disk" "dm_cloudinit" {
 # see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/volume.html.markdown
 resource "libvirt_volume" "dm_root" {
   name             = "${var.prefix}_dm_root.img"
-  base_volume_name = var.base_volume_name
+  base_volume_name = var.dm_base_volume_name
   format           = "qcow2"
 }
 

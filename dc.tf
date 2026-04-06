@@ -49,7 +49,7 @@ resource "libvirt_cloudinit_disk" "dc_cloudinit" {
 resource "libvirt_volume" "dc_root" {
   count            = length(local.dcs)
   name             = "${var.prefix}_dc${count.index + 1}_root.img"
-  base_volume_name = var.base_volume_name
+  base_volume_name = var.dc_base_volume_name
   format           = "qcow2"
 }
 

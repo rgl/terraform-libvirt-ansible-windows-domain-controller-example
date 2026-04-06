@@ -110,6 +110,7 @@ if ($windowsBuild -ge 26100) {
         | Where-Object {
             $_.PackageFullName -like 'Microsoft.MicrosoftEdge.*' -or `
             $_.PackageFullName -like 'Microsoft.Edge.*' -or `
+            $_.PackageFullName -like 'MicrosoftCorporationII.WinAppRuntime.*' -or `
             $_.PackageFullName -like 'NotepadPlusPlus*'
         } `
         | ForEach-Object {
