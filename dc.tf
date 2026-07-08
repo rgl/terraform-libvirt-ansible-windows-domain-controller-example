@@ -7,8 +7,8 @@ resource "random_id" "dc" {
 # a multipart cloudbase-init cloud-config.
 # NB the parts are executed by their declared order.
 # see https://github.com/cloudbase/cloudbase-init
-# see https://cloudbase-init.readthedocs.io/en/1.1.6/userdata.html#cloud-config
-# see https://cloudbase-init.readthedocs.io/en/1.1.6/userdata.html#userdata
+# see https://cloudbase-init.readthedocs.io/en/1.1.8/userdata.html#cloud-config
+# see https://cloudbase-init.readthedocs.io/en/1.1.8/userdata.html#userdata
 # see https://registry.terraform.io/providers/hashicorp/cloudinit/latest/docs/data-sources/config
 # see https://www.terraform.io/docs/configuration/expressions.html#string-literals
 data "cloudinit_config" "dc" {
