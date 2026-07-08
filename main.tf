@@ -94,6 +94,19 @@ locals {
   dm_ip_address = "10.17.3.10"
 }
 
+# see https://gitlab.com/libosinfo/osinfo-db/-/blob/main/data/os/microsoft.com/win-2k22.xml.in
+# see https://gitlab.com/libosinfo/osinfo-db/-/blob/main/data/os/microsoft.com/win-2k25.xml.in
+# see https://gitlab.com/libosinfo/osinfo-db/-/blob/main/data/os/microsoft.com/win-11.xml.in
+locals {
+  windows_version_to_os_map = {
+    "2022" = "2k22"
+    "2025" = "2k25"
+    "11"   = "11"
+  }
+  dc_os_id = "http://microsoft.com/win/${lookup(local.windows_version_to_os_map, regex("windows-([^-]+)", var.dc_base_volume_name)[0], "2k22")}"
+  dm_os_id = "http://microsoft.com/win/${lookup(local.windows_version_to_os_map, regex("windows-([^-]+)", var.dm_base_volume_name)[0], "2k22")}"
+}
+
 # see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/network.markdown
 resource "libvirt_network" "example" {
   name      = var.prefix

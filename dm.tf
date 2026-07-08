@@ -64,7 +64,9 @@ resource "libvirt_domain" "dm" {
     type = "qxl"
   }
   xml {
-    xslt = file("libvirt-domain.xsl")
+    xslt = templatefile("libvirt-domain.xsl.tpl", {
+      os_id = local.dm_os_id
+    })
   }
   qemu_agent = true
   cloudinit  = libvirt_cloudinit_disk.dm_cloudinit.id
