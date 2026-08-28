@@ -1,6 +1,6 @@
 # see https://github.com/hashicorp/terraform
 terraform {
-  required_version = "1.15.7"
+  required_version = "1.16.0"
   required_providers {
     # see https://registry.terraform.io/providers/hashicorp/random
     # see https://github.com/hashicorp/terraform-provider-random
@@ -60,7 +60,7 @@ variable "winrm_password" {
 # NB this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
 variable "dc_base_volume_name" {
   type    = string
-  default = "windows-2022-uefi-amd64_vagrant_box_image_0.0.0_box_0.img"
+  default = "windows-2025-uefi-amd64_vagrant_box_image_0.0.0_box_0.img"
 }
 
 # NB this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
