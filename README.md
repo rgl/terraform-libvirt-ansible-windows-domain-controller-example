@@ -153,25 +153,25 @@ echo %logonserver%
 whoami /all
 klist
 :: use the share as the current user.
-echo %time% %user% >\\DC\Share\test.txt
-type \\DC\Share\test.txt
+echo %time% %user% >\\DC1\Share\test.txt
+type \\DC1\Share\test.txt
 klist
 :: use the share as the other user.
 :: NB alice can write to the share.
 :: NB bob can only read from the share.
 if "%username%"=="alice" (set otherusername=bob) else (set otherusername=alice)
 set otheruser=%userdomain%\%otherusername%
-net use x: \\DC\Share /user:%otheruser% HeyH0Password
+net use x: \\DC1\Share /user:%otheruser% HeyH0Password
 if "%otherusername%"=="bob" (echo NB writes are expected to fail)
-echo %time% %otheruser% >\\DC\Share\test.txt
-type \\DC\Share\test.txt
+echo %time% %otheruser% >\\DC1\Share\test.txt
+type \\DC1\Share\test.txt
 net use x: /user:%otheruser% /delete
 klist
 :: login as the current user, then, try to write gain.
 :: NB a re-login is required to flush the previous smb session/credential.
-net use x: \\DC\Share /user:%user%
-echo %time% %user% >\\DC\Share\test.txt
-type \\DC\Share\test.txt
+net use x: \\DC1\Share /user:%user%
+echo %time% %user% >\\DC1\Share\test.txt
+type \\DC1\Share\test.txt
 net use x: /user:%user% /delete
 klist
 exit
