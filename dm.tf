@@ -30,8 +30,9 @@ data "cloudinit_config" "dm" {
 
 # a cloudbase-init cloud-config disk.
 # NB this creates an iso image that will be used by the NoCloud cloudbase-init datasource.
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/cloudinit.html.markdown
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/libvirt/cloudinit_def.go#L139-L168
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/cloudinit_disk
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/cloudinit_disk.md
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/internal/provider/cloudinit_disk_resource.go#L291-L341
 resource "libvirt_cloudinit_disk" "dm_cloudinit" {
   name = "${var.prefix}_dm_cloudinit.iso"
   meta_data = jsonencode({
@@ -41,43 +42,242 @@ resource "libvirt_cloudinit_disk" "dm_cloudinit" {
   user_data = data.cloudinit_config.dm.rendered
 }
 
-# this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/volume.html.markdown
-resource "libvirt_volume" "dm_root" {
-  name             = "${var.prefix}_dm_root.img"
-  base_volume_name = var.dm_base_volume_name
-  format           = "qcow2"
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/volume
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/volume.md
+resource "libvirt_volume" "dm_cloudinit" {
+  pool = "default"
+  name = "${var.prefix}_dm_cloudinit.iso"
+  create = {
+    content = {
+      url = libvirt_cloudinit_disk.dm_cloudinit.path
+    }
+  }
 }
 
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/domain.html.markdown
+# this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/website/docs/r/volume.html.markdown
+resource "libvirt_volume" "dm_root" {
+  pool     = "default"
+  name     = "${var.prefix}_dm_root.img"
+  capacity = 66 * 1024 * 1024 * 1024 # 66GiB. this root FS is automatically resized by cloudbase-init (by its cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin plugin which is included in the rgl/windows-vagrant image).
+  target = {
+    format = {
+      type = "qcow2"
+    }
+  }
+  backing_store = {
+    format = {
+      type = "qcow2"
+    }
+    path = "/var/lib/libvirt/images/${var.dm_base_volume_name}"
+  }
+}
+
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/domain
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/domain.md
 resource "libvirt_domain" "dm" {
   name        = "${var.prefix}-dm"
   description = "see ${var.workspace_path}"
-  machine     = "q35"
-  firmware    = "/usr/share/OVMF/OVMF_CODE_4M.fd"
-  cpu {
+  running     = true
+  type        = "kvm"
+  vcpu        = local.cpu_sockets * local.cpu_cores * local.cpu_threads
+  memory      = local.memory_mb
+  memory_unit = "MiB"
+  features = {
+    acpi = true
+    apic = {}
+    hyper_v = {
+      mode = "passthrough"
+    }
+    vm_port = {
+      state = "off"
+    }
+  }
+  metadata = {
+    xml = <<-EOF
+      <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+        <libosinfo:os id="${local.dm_os_id}"/>
+      </libosinfo:libosinfo>
+      EOF
+  }
+  os = {
+    type         = "hvm"
+    type_arch    = "x86_64"
+    type_machine = "q35"
+    firmware     = "efi"
+  }
+  cpu = {
     mode = "host-passthrough"
+    topology = {
+      sockets = local.cpu_sockets
+      cores   = local.cpu_cores
+      threads = local.cpu_threads
+    }
   }
-  vcpu   = 4
-  memory = 4 * 1024
-  video {
-    type = "qxl"
+  clock = {
+    offset = "localtime"
+    timer = [
+      {
+        name        = "rtc"
+        tick_policy = "catchup"
+      },
+      {
+        name        = "pit"
+        tick_policy = "delay"
+      },
+      {
+        name    = "hpet"
+        present = "no"
+      },
+      {
+        name    = "hypervclock"
+        present = "yes"
+      },
+    ]
   }
-  xml {
-    xslt = templatefile("libvirt-domain.xsl.tpl", {
-      os_id = local.dm_os_id
-    })
+  devices = {
+    graphics = [
+      {
+        spice = {
+          auto_port = true
+          listeners = [
+            {
+              address = {}
+            }
+          ]
+        }
+      }
+    ]
+    videos = [
+      {
+        model = {
+          type    = "qxl"
+          primary = "yes"
+          vram    = 65536
+          ram     = 65536
+          vga_mem = 16384
+          heads   = 1
+        }
+      }
+    ]
+    controllers = [
+      {
+        type  = "scsi"
+        model = "virtio-scsi"
+      },
+      {
+        type = "virtio-serial"
+      }
+    ]
+    channels = [
+      {
+        source = {
+          unix = {
+            mode = "bind"
+          }
+        }
+        target = {
+          virt_io = {
+            name = "org.qemu.guest_agent.0"
+          }
+        }
+      },
+      {
+        source = {
+          spice_vmc = true
+        }
+        target = {
+          virt_io = {
+            name = "com.redhat.spice.0"
+          }
+        }
+      }
+    ]
+    rngs = [
+      {
+        model = "virtio"
+        backend = {
+          random = "/dev/urandom"
+        }
+      }
+    ]
+    disks = [
+      {
+        driver = {
+          name = "qemu"
+          type = "qcow2"
+        }
+        source = {
+          volume = {
+            pool   = libvirt_volume.dm_root.pool
+            volume = libvirt_volume.dm_root.name
+          }
+        }
+        block_io = {
+          # set the discard_granularity to make windows happy.
+          # NB when using a qemu/kvm based hypervisor, ssd trim is only available when
+          #    discard_granularity is set to 8K (or higher), otherwise,
+          #    defrag.exe C: /H /L fails as: Incorrect function. (0x80070001) error.
+          #    NB when using proxmox, there is no explicit way to set discard_granularity.
+          #       it could be set using qemu_additional_args argument, but when using
+          #       non-root user token, that fails as: only root can set 'args' config, so
+          #       we do not do it.
+          #    see lsblk -o NAME,PHY-SEC,LOG-SEC,DISC-GRAN,DISC-ALN
+          #    see fsutil.exe behavior query DisableDeleteNotify
+          #    see /etc/libvirt/qemu/{vm_name}.xml (when using libvirt).
+          #    see /etc/pve/qemu-server/{vm_id}.conf (when using proxmox).
+          # see https://libvirt.org/formatdomain.html
+          # see https://github.com/virtio-win/kvm-guest-drivers-windows/issues/1574
+          discard_granularity = 8 * 1024
+        }
+        target = {
+          bus = "scsi"
+          dev = "sda"
+        }
+        wwn = format("000000000000aa%02x", 0)
+      },
+      {
+        device = "cdrom"
+        source = {
+          volume = {
+            pool   = libvirt_volume.dm_cloudinit.pool
+            volume = libvirt_volume.dm_cloudinit.name
+          }
+        }
+        target = {
+          bus = "scsi"
+          dev = "hdd"
+        }
+        serial = "cloudinit"
+      }
+    ]
+    interfaces = [
+      {
+        type = "network"
+        model = {
+          type = "virtio"
+        }
+        mac = {
+          address = local.dm_mac_address
+        }
+        source = {
+          network = {
+            network = libvirt_network.example.name
+          }
+        }
+        wait_for_ip = {
+          network = local.example_ip_cidr
+          source  = "agent"
+          timeout = 300 # 300s (5m).
+        }
+      }
+    ]
   }
-  qemu_agent = true
-  cloudinit  = libvirt_cloudinit_disk.dm_cloudinit.id
-  disk {
-    volume_id = libvirt_volume.dm_root.id
-    scsi      = true
-  }
-  network_interface {
-    network_id     = libvirt_network.example.id
-    wait_for_lease = true
-    hostname       = "dm"
-    addresses      = [local.dm_ip_address]
-  }
+}
+
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/data-sources/domain_interface_addresses
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/data-sources/domain_interface_addresses.md
+data "libvirt_domain_interface_addresses" "dm" {
+  domain = libvirt_domain.dm.name
+  source = "agent"
 }

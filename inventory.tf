@@ -35,7 +35,12 @@ resource "ansible_host" "dc" {
   name   = "dc${count.index + 1}"
   groups = [ansible_group.dcs.name]
   variables = {
-    ansible_host = local.dcs[count.index].ip_address
+    ansible_host = one(flatten([
+      for interface in data.libvirt_domain_interface_addresses.dc[count.index].interfaces : [
+        for addr in interface.addrs : addr.addr
+        if addr.type == "ipv4" && provider::corefunc::net_cidr_contains(local.example_ip_cidr, addr.addr)
+      ]
+    ]))
   }
 }
 
@@ -43,6 +48,11 @@ resource "ansible_host" "dm" {
   name   = "dm"
   groups = [ansible_group.dms.name]
   variables = {
-    ansible_host = length(libvirt_domain.dm.network_interface[0].addresses) > 0 ? libvirt_domain.dm.network_interface[0].addresses[0] : ""
+    ansible_host = one(flatten([
+      for interface in data.libvirt_domain_interface_addresses.dm.interfaces : [
+        for addr in interface.addrs : addr.addr
+        if addr.type == "ipv4" && provider::corefunc::net_cidr_contains(local.example_ip_cidr, addr.addr)
+      ]
+    ]))
   }
 }

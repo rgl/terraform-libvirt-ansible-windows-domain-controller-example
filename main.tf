@@ -8,6 +8,12 @@ terraform {
       source  = "hashicorp/random"
       version = "3.9.1"
     }
+    # see https://registry.terraform.io/providers/northwood-labs/corefunc
+    # see https://github.com/northwood-labs/terraform-provider-corefunc
+    corefunc = {
+      source  = "northwood-labs/corefunc"
+      version = "2.3.0"
+    }
     # see https://registry.terraform.io/providers/hashicorp/cloudinit
     # see https://github.com/hashicorp/terraform-provider-cloudinit
     cloudinit = {
@@ -18,7 +24,7 @@ terraform {
     # see https://github.com/dmacvicar/terraform-provider-libvirt
     libvirt = {
       source  = "dmacvicar/libvirt"
-      version = "0.8.3"
+      version = "0.9.9"
     }
     # see https://registry.terraform.io/providers/ansible/ansible
     # see https://github.com/ansible/terraform-provider-ansible
@@ -81,17 +87,24 @@ output "dm_ip_address" {
   value = local.dm_ip_address
 }
 
+# see https://en.wikipedia.org/wiki/MAC_address#Ranges_of_group_and_locally_administered_addresses
 locals {
   example_ip_cidr = "10.17.3.0/24"
   dcs = [
-    {
-      ip_address = "10.17.3.2"
-    },
-    {
-      ip_address = "10.17.3.3"
-    },
+    for i in range(2, 2 + 2) : {
+      mac_address = format("02:00:00:00:00:%02x", i)
+      ip_address  = "10.17.3.${i}"
+    }
   ]
-  dm_ip_address = "10.17.3.10"
+  dm_mac_address = format("02:00:00:00:00:%02x", 10)
+  dm_ip_address  = "10.17.3.10"
+}
+
+locals {
+  cpu_sockets = 1
+  cpu_cores   = 4
+  cpu_threads = 1
+  memory_mb   = 4 * 1024
 }
 
 # see https://gitlab.com/libosinfo/osinfo-db/-/blob/main/data/os/microsoft.com/win-2k22.xml.in
@@ -107,17 +120,49 @@ locals {
   dm_os_id = "http://microsoft.com/win/${lookup(local.windows_version_to_os_map, regex("windows-([^-]+)", var.dm_base_volume_name)[0], "2k22")}"
 }
 
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/network.markdown
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/network
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/network.md
 resource "libvirt_network" "example" {
-  name      = var.prefix
-  mode      = "nat"
-  domain    = "example.test"
-  addresses = [local.example_ip_cidr]
-  dhcp {
-    enabled = true
+  name = var.prefix
+  forward = {
+    nat = {
+      ports = [
+        {
+          start = 1024
+          end   = 65535
+        }
+      ]
+    }
   }
-  dns {
-    enabled    = true
-    local_only = false
+  domain = {
+    name = "example.test"
   }
+  ips = [
+    {
+      address = cidrhost(local.example_ip_cidr, 1)
+      netmask = cidrnetmask(local.example_ip_cidr)
+      dhcp = {
+        ranges = [
+          {
+            start = cidrhost(local.example_ip_cidr, 2)
+            end   = cidrhost(local.example_ip_cidr, -2)
+          }
+        ]
+        hosts = concat(
+          [
+            for dc in local.dcs : {
+              mac = dc.mac_address
+              ip  = dc.ip_address
+            }
+          ],
+          [
+            {
+              mac = local.dm_mac_address
+              ip  = local.dm_ip_address
+            }
+          ]
+        )
+      }
+    }
+  ]
 }

@@ -32,8 +32,9 @@ data "cloudinit_config" "dc" {
 
 # a cloudbase-init cloud-config disk.
 # NB this creates an iso image that will be used by the NoCloud cloudbase-init datasource.
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/cloudinit.html.markdown
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/libvirt/cloudinit_def.go#L139-L168
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/cloudinit_disk
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/cloudinit_disk.md
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/internal/provider/cloudinit_disk_resource.go#L291-L341
 resource "libvirt_cloudinit_disk" "dc_cloudinit" {
   count = length(local.dcs)
   name  = "${var.prefix}_dc${count.index + 1}_cloudinit.iso"
@@ -44,45 +45,247 @@ resource "libvirt_cloudinit_disk" "dc_cloudinit" {
   user_data = data.cloudinit_config.dc[count.index].rendered
 }
 
-# this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/volume.html.markdown
-resource "libvirt_volume" "dc_root" {
-  count            = length(local.dcs)
-  name             = "${var.prefix}_dc${count.index + 1}_root.img"
-  base_volume_name = var.dc_base_volume_name
-  format           = "qcow2"
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/volume
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/volume.md
+resource "libvirt_volume" "dc_cloudinit" {
+  count = length(local.dcs)
+  pool  = "default"
+  name  = "${var.prefix}_dc${count.index + 1}_cloudinit.iso"
+  create = {
+    content = {
+      url = libvirt_cloudinit_disk.dc_cloudinit[count.index].path
+    }
+  }
 }
 
-# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.8.3/website/docs/r/domain.html.markdown
+# this uses the vagrant windows image imported from https://github.com/rgl/windows-vagrant.
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/volume
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/volume.md
+resource "libvirt_volume" "dc_root" {
+  count    = length(local.dcs)
+  pool     = "default"
+  name     = "${var.prefix}_dc${count.index + 1}_root.img"
+  capacity = 66 * 1024 * 1024 * 1024 # 66GiB. this root FS is automatically resized by cloudbase-init (by its cloudbaseinit.plugins.windows.extendvolumes.ExtendVolumesPlugin plugin which is included in the rgl/windows-vagrant image).
+  target = {
+    format = {
+      type = "qcow2"
+    }
+  }
+  backing_store = {
+    format = {
+      type = "qcow2"
+    }
+    path = "/var/lib/libvirt/images/${var.dc_base_volume_name}"
+  }
+}
+
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/resources/domain
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/resources/domain.md
 resource "libvirt_domain" "dc" {
   count       = length(local.dcs)
   name        = "${var.prefix}-dc${count.index + 1}"
   description = "see ${var.workspace_path}"
-  machine     = "q35"
-  firmware    = "/usr/share/OVMF/OVMF_CODE_4M.fd"
-  cpu {
+  running     = true
+  type        = "kvm"
+  vcpu        = local.cpu_sockets * local.cpu_cores * local.cpu_threads
+  memory      = local.memory_mb
+  memory_unit = "MiB"
+  features = {
+    acpi = true
+    apic = {}
+    hyper_v = {
+      mode = "passthrough"
+    }
+    vm_port = {
+      state = "off"
+    }
+  }
+  metadata = {
+    xml = <<-EOF
+      <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
+        <libosinfo:os id="${local.dc_os_id}"/>
+      </libosinfo:libosinfo>
+      EOF
+  }
+  os = {
+    type         = "hvm"
+    type_arch    = "x86_64"
+    type_machine = "q35"
+    firmware     = "efi"
+  }
+  cpu = {
     mode = "host-passthrough"
+    topology = {
+      sockets = local.cpu_sockets
+      cores   = local.cpu_cores
+      threads = local.cpu_threads
+    }
   }
-  vcpu   = 4
-  memory = 4 * 1024
-  video {
-    type = "qxl"
+  clock = {
+    offset = "localtime"
+    timer = [
+      {
+        name        = "rtc"
+        tick_policy = "catchup"
+      },
+      {
+        name        = "pit"
+        tick_policy = "delay"
+      },
+      {
+        name    = "hpet"
+        present = "no"
+      },
+      {
+        name    = "hypervclock"
+        present = "yes"
+      },
+    ]
   }
-  xml {
-    xslt = templatefile("libvirt-domain.xsl.tpl", {
-      os_id = local.dc_os_id
-    })
+  devices = {
+    graphics = [
+      {
+        spice = {
+          auto_port = true
+          listeners = [
+            {
+              address = {}
+            }
+          ]
+        }
+      }
+    ]
+    videos = [
+      {
+        model = {
+          type    = "qxl"
+          primary = "yes"
+          vram    = 65536
+          ram     = 65536
+          vga_mem = 16384
+          heads   = 1
+        }
+      }
+    ]
+    controllers = [
+      {
+        type  = "scsi"
+        model = "virtio-scsi"
+      },
+      {
+        type = "virtio-serial"
+      }
+    ]
+    channels = [
+      {
+        source = {
+          unix = {
+            mode = "bind"
+          }
+        }
+        target = {
+          virt_io = {
+            name = "org.qemu.guest_agent.0"
+          }
+        }
+      },
+      {
+        source = {
+          spice_vmc = true
+        }
+        target = {
+          virt_io = {
+            name = "com.redhat.spice.0"
+          }
+        }
+      }
+    ]
+    rngs = [
+      {
+        model = "virtio"
+        backend = {
+          random = "/dev/urandom"
+        }
+      }
+    ]
+    disks = [
+      {
+        driver = {
+          name = "qemu"
+          type = "qcow2"
+        }
+        source = {
+          volume = {
+            pool   = libvirt_volume.dc_root[count.index].pool
+            volume = libvirt_volume.dc_root[count.index].name
+          }
+        }
+        block_io = {
+          # set the discard_granularity to make windows happy.
+          # NB when using a qemu/kvm based hypervisor, ssd trim is only available when
+          #    discard_granularity is set to 8K (or higher), otherwise,
+          #    defrag.exe C: /H /L fails as: Incorrect function. (0x80070001) error.
+          #    NB when using proxmox, there is no explicit way to set discard_granularity.
+          #       it could be set using qemu_additional_args argument, but when using
+          #       non-root user token, that fails as: only root can set 'args' config, so
+          #       we do not do it.
+          #    see lsblk -o NAME,PHY-SEC,LOG-SEC,DISC-GRAN,DISC-ALN
+          #    see fsutil.exe behavior query DisableDeleteNotify
+          #    see /etc/libvirt/qemu/{vm_name}.xml (when using libvirt).
+          #    see /etc/pve/qemu-server/{vm_id}.conf (when using proxmox).
+          # see https://libvirt.org/formatdomain.html
+          # see https://github.com/virtio-win/kvm-guest-drivers-windows/issues/1574
+          discard_granularity = 8 * 1024
+        }
+        target = {
+          bus = "scsi"
+          dev = "sda"
+        }
+        wwn = format("000000000000aa%02x", 0)
+      },
+      {
+        device = "cdrom"
+        source = {
+          volume = {
+            pool   = libvirt_volume.dc_cloudinit[count.index].pool
+            volume = libvirt_volume.dc_cloudinit[count.index].name
+          }
+        }
+        target = {
+          bus = "scsi"
+          dev = "hdd"
+        }
+        serial = "cloudinit"
+      }
+    ]
+    interfaces = [
+      {
+        type = "network"
+        model = {
+          type = "virtio"
+        }
+        mac = {
+          address = local.dcs[count.index].mac_address
+        }
+        source = {
+          network = {
+            network = libvirt_network.example.name
+          }
+        }
+        wait_for_ip = {
+          network = local.example_ip_cidr
+          source  = "agent"
+          timeout = 300 # 300s (5m).
+        }
+      }
+    ]
   }
-  qemu_agent = true
-  cloudinit  = libvirt_cloudinit_disk.dc_cloudinit[count.index].id
-  disk {
-    volume_id = libvirt_volume.dc_root[count.index].id
-    scsi      = true
-  }
-  network_interface {
-    network_id     = libvirt_network.example.id
-    wait_for_lease = true
-    hostname       = "dc${count.index + 1}"
-    addresses      = [local.dcs[count.index].ip_address]
-  }
+}
+
+# see https://registry.terraform.io/providers/dmacvicar/libvirt/0.9.9/docs/data-sources/domain_interface_addresses
+# see https://github.com/dmacvicar/terraform-provider-libvirt/blob/v0.9.9/docs/data-sources/domain_interface_addresses.md
+data "libvirt_domain_interface_addresses" "dc" {
+  count  = length(local.dcs)
+  domain = libvirt_domain.dc[count.index].name
+  source = "agent"
 }
