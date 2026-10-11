@@ -114,6 +114,8 @@ dcdiag
 repadmin /replsummary
 repadmin /showrepl
 repadmin /queue
+pwsh -c Get-Tpm
+pwsh -c Get-TpmEndorsementKeyInfo
 exit
 ```
 
@@ -152,6 +154,9 @@ echo %userprofile%
 echo %logonserver%
 whoami /all
 klist
+pwsh -c Get-Tpm
+pwsh -c Get-TpmEndorsementKeyInfo
+pwsh -c Get-BitLockerVolume
 :: use the share as the current user.
 echo %time% %user% >\\DC1\Share\test.txt
 type \\DC1\Share\test.txt

@@ -201,6 +201,16 @@ resource "libvirt_domain" "dm" {
         }
       }
     ]
+    tpms = [
+      {
+        model = "tpm-crb"
+        backend = {
+          emulator = {
+            version = "2.0"
+          }
+        }
+      }
+    ]
     disks = [
       {
         driver = {

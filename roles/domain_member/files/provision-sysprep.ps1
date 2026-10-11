@@ -162,6 +162,22 @@ Remove-Item -Force C:\Windows\System32\Sysprep\Panther\diag*.xml
 # Remove-Item -Force C:\Windows\Panther\setup*.log
 # Remove-Item -Force C:\Windows\Panther\diag*.xml
 
+# disable BitLocker.
+# NB without this, sysprep will fail with:
+#       SYSPRP BitLocker-Sysprep: BitLocker is on for the OS volume. Turn BitLocker off to run Sysprep. (0x80310039)
+if (Get-Command -Name 'Get-BitLockerVolume' -ErrorAction SilentlyContinue) {
+    $osVolume = 'C:'
+    $status = Get-BitLockerVolume -MountPoint $osVolume
+    if ($status.VolumeStatus -ne 'FullyDecrypted') {
+        Write-ProvisionProgress 'Disabling BitLocker...'
+        Disable-BitLocker -MountPoint $osVolume | Out-Null
+        do {
+            Start-Sleep -Seconds 15
+            $status = Get-BitLockerVolume -MountPoint $osVolume
+        } while ($status.VolumeStatus -ne 'FullyDecrypted')
+    }
+}
+
 # sysprep the machine.
 # see https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/sysprep-process-overview?view=windows-11
 # see https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-states?view=windows-11
