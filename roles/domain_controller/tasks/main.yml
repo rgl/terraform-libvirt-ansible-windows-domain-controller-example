@@ -2,8 +2,8 @@
   when: inventory_hostname_short == "dc1"
   microsoft.ad.domain:
     reboot: true
-    domain_mode: WinThreshold
-    forest_mode: WinThreshold
+    domain_mode: Win2025
+    forest_mode: Win2025
     install_dns: true
     create_dns_delegation: false
     dns_domain_name: "{{ domain_controller_dns_domain_name }}"
